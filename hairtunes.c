@@ -671,8 +671,6 @@ static short *buffer_get_frame(void) {
     short buf_fill;
     seq_t read;
     abuf_t *abuf = 0;
-    unsigned short next;
-    int i;
 
     pthread_mutex_lock(&ab_mutex);
 
@@ -699,15 +697,13 @@ static short *buffer_get_frame(void) {
     buf_fill = ab_write - ab_read;
     bf_est_update(buf_fill);
 
-    // check if t+16, t+32, t+64, t+128, ... (START_FILL / 2)
-    // packets have arrived... last-chance resend
     if (!ab_buffering) {
-        for (i = 16; i < (START_FILL / 2); i = (i * 2)) {
-            next = ab_read + i;
-            abuf = audio_buffer + BUFIDX(next);
-            if (!abuf->ready) {
-                rtp_request_resend(next, next);
-            }
+        // check if the t+5th packet has arrived... last-chance resend
+        read = ab_read + 5;
+        abuf = audio_buffer + BUFIDX(read);
+        if (!abuf->ready) {
+            rtp_request_resend(read, read);
+            abuf->ready = -1;
         }
     }
 
